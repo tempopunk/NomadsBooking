@@ -4,23 +4,25 @@ import { useParams, useNavigate } from 'react-router-dom';
 import MainHeader from '../../../components/MainHeader';
 import Footer from '../../../components/Footer';
 import supportApi from '../api/supportApi';
-
+import { useAuth } from '../../authentication/context/AuthContext';
+ 
 function ResolveTicketPage() {
   const [ticket, setTicket] = useState(null);
+  const {user} = useAuth();
   const [agentResponse, setAgentResponse] = useState('');
   const [status, setStatus] = useState('IN_PROGRESS');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  
+ 
   const { ticketId } = useParams();
   const navigate = useNavigate();
-
+ 
   useEffect(() => {
     fetchTicketDetails();
   }, [ticketId]);
-
+ 
   const fetchTicketDetails = async () => {
     try {
       const data = await supportApi.getTicketDetails(ticketId);
@@ -31,12 +33,12 @@ function ResolveTicketPage() {
       setLoading(false);
     }
   };
-
+ 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setError('');
-
+ 
     try {
       await supportApi.updateTicketByAgent(ticketId, status, agentResponse);
       setSuccess(true);
@@ -46,7 +48,22 @@ function ResolveTicketPage() {
       setSubmitting(false);
     }
   };
-
+ 
+  const getAgentDashboardPath = () => {
+    if (!user) return '/agent/hotel-dashboard'; // fallback
+   
+    switch (user.role) {
+      case 'HotelAgent':
+        return '/agent/hotel-dashboard';
+      case 'FlightAgent':
+        return '/agent/flight-dashboard';
+      case 'TravelAgent':
+        return '/agent/travel-dashboard';
+      default:
+        return '/agent/hotel-dashboard';
+    }
+  };
+ 
   if (loading) {
     return (
       <>
@@ -58,7 +75,7 @@ function ResolveTicketPage() {
       </>
     );
   }
-
+ 
   return (
     <div style={{
       minHeight: '100vh',
@@ -73,9 +90,9 @@ function ResolveTicketPage() {
             {success ? (
               <div className="text-center">
                 <h4 className="text-success mb-4" style={{ color: '#000000' }}>Ticket Updated Successfully!</h4>
-                <Button 
-                  variant="primary" 
-                  onClick={() => navigate('/agent/hotel-dashboard')}
+                <Button
+                  variant="primary"
+                  onClick={() => navigate(getAgentDashboardPath())}
                 >
                   Back to Dashboard
                 </Button>
@@ -83,13 +100,13 @@ function ResolveTicketPage() {
             ) : (
               <>
                 <h3 className="mb-4" style={{ color: '#000000' }}>Resolve Support Ticket #{ticketId}</h3>
-                
+               
                 {error && (
                   <Alert variant="danger" className="mb-4">
                     {error}
                   </Alert>
                 )}
-
+ 
                 <div className="mb-4">
                   <h5 style={{ color: '#000000' }}>Ticket Details</h5>
                   <p><strong>User ID:</strong> {ticket?.userId}</p>
@@ -98,11 +115,11 @@ function ResolveTicketPage() {
                   <p><strong>Current Status:</strong> {ticket?.status}</p>
                   <p><strong>Created Date:</strong> {new Date(ticket?.createdDate).toLocaleString()}</p>
                 </div>
-
+ 
                 <Form onSubmit={handleSubmit}>
                   <Form.Group className="mb-4">
                     <Form.Label>Update Status</Form.Label>
-                    <Form.Select 
+                    <Form.Select
                       value={status}
                       onChange={(e) => setStatus(e.target.value)}
                       required
@@ -112,7 +129,7 @@ function ResolveTicketPage() {
                       <option value="CLOSED">Closed</option>
                     </Form.Select>
                   </Form.Group>
-
+ 
                   <Form.Group className="mb-4">
                     <Form.Label>Agent Response</Form.Label>
                     <Form.Control
@@ -124,18 +141,18 @@ function ResolveTicketPage() {
                       placeholder="Enter your response to the user's issue..."
                     />
                   </Form.Group>
-
+ 
                   <div className="d-flex gap-3">
-                    <Button 
-                      variant="primary" 
+                    <Button
+                      variant="primary"
                       type="submit"
                       disabled={submitting}
                     >
                       {submitting ? 'Updating...' : 'Update Ticket'}
                     </Button>
-                    <Button 
+                    <Button
                       variant="outline-secondary"
-                      onClick={() => navigate('/agent/hotel-dashboard')}
+                      onClick={() => navigate(getAgentDashboardPath())}
                       disabled={submitting}
                     >
                       Cancel
@@ -151,5 +168,5 @@ function ResolveTicketPage() {
     </div>
   );
 }
-
+ 
 export default ResolveTicketPage;
