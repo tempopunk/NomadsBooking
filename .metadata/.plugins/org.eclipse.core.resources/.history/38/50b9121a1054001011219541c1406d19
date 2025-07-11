@@ -1,0 +1,38 @@
+package com.example.demo;
+
+
+import org.springframework.cloud.gateway.route.RouteLocator;
+import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class GatewayConfig {
+	@Bean
+    public RouteLocator customRouteLocator(RouteLocatorBuilder builder) {
+        return builder.routes()
+            .route("FlightAndHotelBooking", r -> r.path("/api/v1/hotel/**")
+                .uri("lb://FlightAndHotelBooking"))
+            .route("FlightAndHotelBooking", r -> r.path("/api/v1/flight/**")
+                    .uri("lb://FlightAndHotelBooking"))  
+            .route("PackageBooking", r -> r.path("/api/v1/package/**")
+                    .uri("lb://PackageBooking"))  
+            .route("PackageBooking", r -> r.path("/api/v1/package/**")
+                    .uri("lb://PackageBooking"))  
+            
+            .route("PaymentService", r -> r.path("/api/v1/payments/**")
+                .uri("lb://PaymentService"))  // Load-balanced service discovery
+            .route("PaymentService", r -> r.path("/api/v1/invoices/**")
+                    .uri("lb://PaymentService")) 
+            .route("UserAuthentication", r -> r.path("/api/v1/auth/**")
+            		
+            .route("UserReviewsAndSupport", r -> r.path("/api/v1/feedback/**")
+                    .uri("lb://UserReviewsAndSupport"))
+            .route("UserReviewsAndSupport", r -> r.path("/api/v1/review/**")
+                    .uri("lb://UserReviewsAndSupport"))
+            .route("UserReviewsAndSupport", r -> r.path("/api/v1/support/**")
+                    .uri("lb://UserReviewsAndSupport"))
+            .build();
+    }
+
+}

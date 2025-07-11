@@ -1,0 +1,15 @@
+package com.nomads.repository;
+
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import com.nomads.entity.Booking;
+import com.nomads.entity.enums.BookingStatus;
+
+@Repository
+public interface BookingRepository extends JpaRepository<Booking, Long> {
+    Optional<Booking> findByBookingId(Long bookingId);
+    Booking findByUserIdANDStatus(int userId,BookingStatus status);
+}

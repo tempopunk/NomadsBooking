@@ -1,0 +1,103 @@
+package com.example.security;
+
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity; // For reactive security
+import org.springframework.security.config.web.server.ServerHttpSecurity; // For reactive HTTP security
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.server.SecurityWebFilterChain; // For reactive filter chain
+import org.springframework.security.web.server.context.NoOpServerSecurityContextRepository; // For stateless security
+
+// Import your ReactiveJwtFilter
+import com.example.security.ReactiveJwtFilter;
+import org.springframework.security.web.server.authentication.AuthenticationWebFilter;
+import org.springframework.security.web.server.authentication.ServerAuthenticationConverter;
+import org.springframework.security.authentication.ReactiveAuthenticationManager;
+import org.springframework.security.authentication.UserDetailsRepositoryReactiveAuthenticationManager;
+import org.springframework.security.core.userdetails.ReactiveUserDetailsService; // Required if using UserDetails for principal in auth manager
+import org.springframework.security.core.userdetails.User; // Example for ReactiveUserDetailsService
+
+import reactor.core.publisher.Mono;
+
+/**
+ * Reactive Spring Security Configuration for the API Gateway.
+ * Configures security rules, JWT validation, and user authentication
+ * using Spring WebFlux compatible components.
+ */
+@Configuration
+@EnableWebFluxSecurity // Enables Spring Security for Spring WebFlux applications
+public class SecurityConfig {
+
+    // You will need an authentication manager for the AuthenticationWebFilter
+    // and a way to convert the token into an Authentication object for the manager.
+    // For simplicity, we'll primarily rely on our ReactiveJwtFilter to set the context,
+    // but a proper reactive flow might use AuthenticationWebFilter for a more complete Spring Security flow.
+
+    private final ReactiveJwtFilter reactiveJwtFilter;
+
+    public SecurityConfig(ReactiveJwtFilter reactiveJwtFilter) {
+        this.reactiveJwtFilter = reactiveJwtFilter;
+    }
+
+    @Bean
+    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
+        http
+            // Disable CSRF for stateless API Gateway
+            .csrf(ServerHttpSecurity.CsrfSpec::disable)
+            // Configure stateless session management
+            .securityContextRepository(NoOpServerSecurityContextRepository.getInstance()) // Essential for stateless JWT
+            // Authorize requests based on paths and roles
+            .authorizeExchange(exchanges -> exchanges
+                // Publicly accessible paths (e.g., login, registration, docs, actuator)
+                .pathMatchers(
+                    "/api/v1/auth/register/user",
+                    "/api/v1/auth/register/agent",
+                    "/api/v1/auth/test",
+                    "/api/v1/auth/login/agent",
+                    "/api/v1/auth/login/user",
+                    "/api/v1/auth/micro/**",
+                    "/actuator/**",
+                    "/swagger-ui/**",
+                    "/v3/api-docs/**"
+                ).permitAll()
+                // Role-based access for specific paths
+                .pathMatchers("/api/v1/auth/admin/**").hasRole("Admin")
+                .pathMatchers("/api/v1/auth/user/**").hasRole("User")
+                .pathMatchers("/api/v1/auth/travel_agent/**").hasRole("TravelAgent")
+                .pathMatchers("/api/v1/auth/hotel_agent/**").hasRole("HotelAgent")
+                .pathMatchers("/api/v1/auth/flight_agent/**").hasRole("FlightAgent")
+                // All other requests require authentication
+                .anyExchange().authenticated()
+            );
+
+        // Add our custom ReactiveJwtFilter.
+        // In WebFlux, custom WebFilters are typically added by making them Spring @Components
+        // and they are automatically picked up by the WebFlux filter chain.
+        // However, for explicit ordering within Spring Security's chain,
+        // we might sometimes configure an AuthenticationWebFilter if we wanted a more
+        // traditional Spring Security authentication flow with an AuthenticationManager.
+        // For a simple JWT validation and context setting, the @Component annotated ReactiveJwtFilter
+        // will automatically run as part of the overall WebFilterChain.
+        // If you need it *within* the ServerHttpSecurity flow explicitly, you might do:
+        // .addFilterAt(reactiveJwtFilter, SecurityWebFiltersOrder.AUTHENTICATION);
+        // But for this setup, making it a @Component and letting WebFlux pick it up is usually sufficient.
+        // The above 'authorizeExchange' rules will then leverage the SecurityContext populated by this filter.
+
+        return http.build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    // --- IMPORTANT NOTE ON AUTHENTICATION PROPAGATION ---
+    // The ReactiveJwtFilter will set the SecurityContext in the Gateway.
+    // To pass this authenticated user information to downstream microservices,
+    // you will still need a custom GlobalFilter (or GatewayFilterFactory)
+    // that reads from ReactiveSecurityContextHolder and adds custom headers
+    // (e.g., X-User-ID, X-User-Roles) to the proxied request.
+    // This part remains crucial and is separate from the SecurityConfig itself.
+}

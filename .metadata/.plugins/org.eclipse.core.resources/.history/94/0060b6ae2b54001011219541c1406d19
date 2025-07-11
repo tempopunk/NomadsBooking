@@ -1,0 +1,262 @@
+package com.nomads.controller;
+
+import java.io.IOException;
+import java.util.List;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.nomads.dto.BookingResourceDto;
+import com.nomads.dto.CreatePackageBookingDto;
+import com.nomads.dto.HotelDto;
+import com.nomads.dto.PaymentResponseDTO;
+import com.nomads.dto.RoomDto;
+import com.nomads.dto.SendBookingDataDto;
+import com.nomads.entity.Hotel;
+import com.nomads.entity.HotelImage;
+import com.nomads.entity.Room;
+import com.nomads.entity.RoomImage;
+import com.nomads.entity.enums.BookingStatus;
+import com.nomads.exception.ResourceNotFoundException;
+import com.nomads.service.HotelService;
+
+import lombok.RequiredArgsConstructor;
+
+
+
+@RestController
+@RequestMapping("/api/v1/hotel")
+@RequiredArgsConstructor
+@CrossOrigin("*")
+public class HotelController {
+	
+	
+	private final HotelService  hotelService;
+	
+	@GetMapping("micro/getid/{bookingId}")
+	public BookingResourceDto getentityId(@PathVariable int bookingId) {
+		return hotelService.getentityId(bookingId);
+		
+		
+		
+	}
+	
+	@GetMapping("micro/fandh/hotelname/{hotelName}")
+	public int getHotelId(@PathVariable String hotelName) {
+		return hotelService.getHotelId(hotelName);
+	}
+	
+	@GetMapping("micro/fandh/roomname/{roomName}")
+	public int getRoomId(@PathVariable String roomName) {
+		return hotelService.getRoomId(roomName);
+	}
+	
+	@PostMapping("micro/fandh/createbooking")
+	public SendBookingDataDto createPackageBooking(@RequestBody CreatePackageBookingDto createPackageBookingDto) {
+		return hotelService.createPackageBooking(createPackageBookingDto);
+	}
+	
+	@PostMapping("micro/fandh/updatebooking1/{bookingId}/{status}")
+	public boolean updateBooking(@PathVariable Long bookingId,@PathVariable BookingStatus status) {
+		return hotelService.updateBooking(bookingId, status);
+	}
+
+	
+	@GetMapping("/user/hotel/search")
+	public ResponseEntity<List<Hotel>> getHotelsByLocation( @RequestParam String location){
+		return ResponseEntity.ok(hotelService.searchByLocation(location));
+		
+	}
+	
+	@GetMapping("/user/hotel/id")
+	public ResponseEntity<Hotel> getHotelsById( @RequestParam int id){
+		return ResponseEntity.ok(hotelService.searchById(id));
+		
+	}
+	
+	
+	
+	@GetMapping("/user/hotel/ascending")
+	public ResponseEntity<List<Hotel>> sortByAscend(@RequestParam String location){
+		return ResponseEntity.ok(hotelService.sortByAscend(location));
+	}
+	
+	@GetMapping("/user/hotel/descending")
+	public ResponseEntity<List<Hotel>> sortByDescend(@RequestParam String location){
+		return ResponseEntity.ok(hotelService.sortByDescend(location));
+	}
+	
+	@GetMapping("/user/hotel/viewrooms")
+	public ResponseEntity<List<Room>> viewRooms(@RequestParam int hotelId){
+		return ResponseEntity.ok(hotelService.viewRooms(hotelId));
+	}
+	
+	@PostMapping("user/hotel/checkout")
+	public ResponseEntity<PaymentResponseDTO> checkOut(int userId,int hotelId,int roomId){
+		return ResponseEntity.ok(hotelService.checkOut(userId,hotelId,roomId));
+	}
+	
+	@PostMapping("/hotel_agent/hotel/addroom")
+	public ResponseEntity<String> addRoom(@RequestParam int hotelId,@RequestBody RoomDto roomDto){
+		return ResponseEntity.ok(hotelService.addRoom(hotelId,roomDto));
+	}
+	
+	@PostMapping("/hotel_agent/hotel/addhotel/{agentId}")
+	public ResponseEntity<String> addHotel(@PathVariable int agentId,@RequestBody HotelDto hotelDto){
+		return ResponseEntity.ok(hotelService.addHotel(agentId,hotelDto));
+	}
+	
+//	@GetMapping("/user/test")
+//	public ResponseEntity<List<Hotel>> test() {
+//		return ResponseEntity.ok(hotelService.find());
+//	}
+	@PostMapping("/hotel_agent/hotel/deleteroom")
+	public String removeRoom(@RequestParam int roomId) {
+		return hotelService.deleteRoom(roomId);
+	}
+	
+	@PostMapping("/hotel_agent/hotel/{hotelId}/images")
+    public ResponseEntity<Hotel> uploadHotelImages(@PathVariable int hotelId,
+                                                   @RequestParam("files") List<MultipartFile> files) {
+        try {
+            Hotel updatedHotel = hotelService.addHotelImages(hotelId, files);
+            return ResponseEntity.status(HttpStatus.CREATED).body(updatedHotel);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+
+    @DeleteMapping("/hotel_agent/hotel/{hotelId}/images/{imageId}")
+    public ResponseEntity<Void> deleteHotelImage(@PathVariable int hotelId,
+                                                @PathVariable Long imageId) {
+        try {
+            hotelService.deleteHotelImage(hotelId, imageId);
+            return ResponseEntity.noContent().build();
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build(); // If image doesn't belong to hotel
+        }
+    }
+
+    @GetMapping("/hotel_agent/hotel/{hotelId}/images")
+    public ResponseEntity<List<HotelImage>> getHotelImages(@PathVariable int hotelId) {
+        try {
+            List<HotelImage> images = hotelService.getHotelImages(hotelId);
+            // NOTE: The actual image data (byte[]) will NOT be serialized by default
+            // due to @JsonIgnore. You'd need a separate endpoint for binary image retrieval.
+            return ResponseEntity.ok(images);
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+
+    @GetMapping("/hotel_agent/hotel/images/{imageId}") // Separate endpoint for getting actual image binary data
+    public ResponseEntity<byte[]> getHotelImageById(@PathVariable Long imageId) {
+        try {
+            HotelImage image = hotelService.getHotelImageById(imageId);
+            if (image.getImageData() != null && image.getContentType() != null) {
+                return ResponseEntity.ok()
+                        .contentType(MediaType.parseMediaType(image.getContentType()))
+                        .body(image.getImageData());
+            }
+            return ResponseEntity.notFound().build();
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+    
+    @PostMapping("/hotel_agent/{roomId}/hotel/images")
+    public ResponseEntity<Room> uploadRoomImages(@PathVariable int roomId,
+                                                 @RequestParam("files") List<MultipartFile> files) {
+        try {
+            Room updatedRoom = hotelService.addRoomImages(roomId, files);
+            return ResponseEntity.status(HttpStatus.CREATED).body(updatedRoom);
+        } catch (IOException e) {
+            // Log the exception for debugging
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                 .body(null); // Or a custom error response DTO
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                                 .body(null);
+        } catch (Exception e) {
+            // Catch any other unexpected exceptions
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST) // Or 500 INTERNAL_SERVER_ERROR
+                                 .body(null);
+        }
+    }
+
+    
+    @DeleteMapping("/hotel_agent/{roomId}/hotel/images/{imageId}")
+    public ResponseEntity<Void> deleteRoomImage(@PathVariable int roomId,
+                                                @PathVariable Long imageId) {
+        try {
+            hotelService.deleteRoomImage(roomId, imageId);
+            return ResponseEntity.noContent().build(); // 204 No Content
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        } catch (IllegalArgumentException e) {
+            // This would be thrown if the image doesn't belong to the specified room
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    
+//    @GetMapping("/{roomId}/images")
+//    public ResponseEntity<List<RoomImage>> getRoomImagesMetadata(@PathVariable int roomId) {
+//        try {
+//            List<RoomImage> images = hotelService.getRoomImages(roomId);
+//            // Due to @JsonIgnore on imageData in RoomImage, the binary data won't be serialized.
+//            // This endpoint is good for listing image IDs, filenames, etc.
+//            return ResponseEntity.ok(images);
+//        } catch (ResourceNotFoundException e) {
+//            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+//        }
+//    }
+
+    
+    @GetMapping("/images/hotel/{imageId}") // No roomId needed here if imageId is globally unique
+    public ResponseEntity<byte[]> getRoomImageById(@PathVariable Long imageId) {
+        try {
+            RoomImage image = hotelService.getRoomImageById(imageId);
+            if (image.getImageData() != null && image.getContentType() != null) {
+                return ResponseEntity.ok()
+                        .contentType(MediaType.parseMediaType(image.getContentType())) // Set the correct MIME type
+                        .body(image.getImageData());
+            }
+            return ResponseEntity.notFound().build();
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+	
+	
+	
+	
+
+}

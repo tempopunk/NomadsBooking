@@ -1,0 +1,58 @@
+server:
+  port: 8083 # The port on which the application will run
+
+spring:
+  application:
+    name: PaymentService # Name of your application
+  datasource:
+    url: jdbc:mysql://localhost:3306/mast?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC # Your database URL
+    username: root # Your database username
+    password: root # Your database password
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update # 'update' is good for development, 'none' or 'validate' for production
+    show-sql: true # Log SQL statements
+    properties:
+      hibernate:
+        '[format_sql]': true # Format SQL logs
+  # You might also want to configure JPA dialect if not auto-detected
+  # jpa:
+  #   database-platform: org.hibernate.dialect.MySQL8Dialect # Example for MySQL 8
+
+# Logging Configuration (COMMENTED OUT - Prefer logback-spring.xml for advanced logging)
+# logging:
+#   level:
+#     root: INFO # Default logging level for all loggers
+#     com.nomad: DEBUG # Set DEBUG level for your application's packages
+#     org.springframework.web: INFO # Spring web logging
+#     org.hibernate: INFO # Hibernate logging
+#   file:
+#     name: logs/nomad-payment-service.log # Log to a file named 'nomad-payment-service.log' in a 'logs' directory
+#   pattern:
+#     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n" # Log pattern for file
+#     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) %cyan(%logger{36}) - %msg%n" # Log pattern for console
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*" # '*' should be quoted in YAML if it's a string
+  # Show detailed health information (e.g., database connection status, disk space)
+  endpoint:
+    health:
+      show-details: always
+eureka:
+  instance:
+     hostname: localhost
+  client:
+    service-url:
+       default-zone: http://localhost:8761/eureka
+springdoc:
+  swagger-ui:
+     path: /swagger-ui.html
+  api-docs:
+     path: /v3/apidocs
+  packagesToScan: com.nomad
+  pathsToMatch: /api/v1/**
+

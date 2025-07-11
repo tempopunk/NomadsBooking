@@ -1,0 +1,48 @@
+spring:
+  application:
+    name: UserAuthentication
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/mast
+    username: root
+    password: root
+  jpa:
+    generate-ddl: true
+    hibernate:
+      ddl-auto: update
+    show-sql: true # This controls logging for each SQL query
+
+server:
+  port: 8090
+
+jwt:
+  secret: mySuperSecretKey123456
+
+logging:
+  level:
+    root: INFO
+  file:
+    name: logs/application.log
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*" 
+  endpoint:
+    health:
+      show-details: always
+eureka:
+   instance:
+      hostname: localhost
+   client:
+      service-url:
+         default-zone: http://localhost:8761/eureka
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/apidocs
+  packagesToScan: com.nomads
+  pathsToMatch: /api/v1/**

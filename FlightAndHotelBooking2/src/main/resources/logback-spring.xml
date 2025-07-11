@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+ 
+    <include resource="org/springframework/boot/logging/logback/base.xml"/>
+ 
+    <property name="LOG_FILE" value="logs/my-payment-module.log"/>
+    <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
+ 
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        </root>
+ 
+    <logger name="com.nomad" level="DEBUG" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        </logger>
+ 
+    <logger name="org.hibernate.SQL" level="DEBUG" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+ 
+    <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+ 
+    <logger name="org.springframework" level="INFO" />
+ 
+    <logger name="com.zaxxer.hikari" level="INFO" />
+ 
+</configuration>
+ 

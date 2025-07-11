@@ -1,0 +1,30 @@
+// src/main/java/com/example/demo/CorsConfig.java (or com.example.gateway.CorsConfig if you prefer a separate package)
+package com.example.demo; // Adjust package to match your project structure
+
+import java.util.Arrays;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.reactive.CorsWebFilter;
+import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
+
+@Configuration
+public class CorsConfig {
+
+    @Bean
+    public CorsWebFilter corsFilter() {
+        CorsConfiguration corsConfiguration = new CorsConfiguration();
+        corsConfiguration.setAllowCredentials(true);
+        // IMPORTANT: Replace "http://localhost:3000" with the actual URL of your React frontend.
+        // In production, this would be your deployed frontend domain (e.g., "https://your-app.com").
+        corsConfiguration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://your-production-frontend-domain.com"));
+        corsConfiguration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
+        corsConfiguration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"));
+        corsConfiguration.setExposedHeaders(Arrays.asList("Access-Control-Allow-Origin", "Access-Control-Allow-Credentials"));
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", corsConfiguration); // Apply CORS to all paths handled by the gateway
+        return new CorsWebFilter(source);
+    }
+}

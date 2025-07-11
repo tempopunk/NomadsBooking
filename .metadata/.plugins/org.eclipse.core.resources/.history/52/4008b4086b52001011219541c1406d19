@@ -1,0 +1,45 @@
+package com.springbootmicroservices.productservice.model.product.mapper;
+
+import com.springbootmicroservices.productservice.model.product.dto.request.ProductCreateRequest;
+import com.springbootmicroservices.productservice.model.product.entity.ProductEntity;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import javax.annotation.processing.Generated;
+
+@Generated(
+    value = "org.mapstruct.ap.MappingProcessor",
+    date = "2025-06-25T15:07:21+0530",
+    comments = "version: 1.5.5.Final, compiler: Eclipse JDT (IDE) 3.41.0.v20250213-1140, environment: Java 21.0.6 (Eclipse Adoptium)"
+)
+public class ProductCreateRequestToProductEntityMapperImpl implements ProductCreateRequestToProductEntityMapper {
+
+    @Override
+    public ProductEntity map(ProductCreateRequest source) {
+        if ( source == null ) {
+            return null;
+        }
+
+        ProductEntity.ProductEntityBuilder<?, ?> productEntity = ProductEntity.builder();
+
+        productEntity.amount( source.getAmount() );
+        productEntity.name( source.getName() );
+        productEntity.unitPrice( source.getUnitPrice() );
+
+        return productEntity.build();
+    }
+
+    @Override
+    public List<ProductEntity> map(Collection<ProductCreateRequest> sources) {
+        if ( sources == null ) {
+            return null;
+        }
+
+        List<ProductEntity> list = new ArrayList<ProductEntity>( sources.size() );
+        for ( ProductCreateRequest productCreateRequest : sources ) {
+            list.add( map( productCreateRequest ) );
+        }
+
+        return list;
+    }
+}

@@ -1,0 +1,89 @@
+package com.example.security;
+ // Consider placing in a 'config' package
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
+import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.security.web.server.authentication.AuthenticationWebFilter;
+import org.springframework.security.web.server.context.NoOpServerSecurityContextRepository;
+import org.springframework.security.web.server.util.matcher.PathPatternParserServerWebExchangeMatcher; // Import for PathPatternParserServerWebExchangeMatcher
+import org.springframework.security.web.server.WebFilterExchange;
+import org.springframework.security.web.server.WebFilterChainProxy; // For ordering
+
+import com.example.security.JwtServerAuthenticationConverter; // Import the new converter
+import com.example.security.JwtReactiveAuthenticationManager; // Import the new manager
+
+/**
+ * Reactive Spring Security Configuration for the API Gateway (Version 2).
+ * This version uses AuthenticationWebFilter for robust JWT integration
+ * and ensures proper handling of security within the reactive stack.
+ */
+@Configuration
+@EnableWebFluxSecurity
+public class SecurityConfig {
+
+    private final JwtServerAuthenticationConverter jwtServerAuthenticationConverter;
+    private final JwtReactiveAuthenticationManager jwtReactiveAuthenticationManager;
+
+    public SecurityConfig(JwtServerAuthenticationConverter jwtServerAuthenticationConverter,
+                          JwtReactiveAuthenticationManager jwtReactiveAuthenticationManager) {
+        this.jwtServerAuthenticationConverter = jwtServerAuthenticationConverter;
+        this.jwtReactiveAuthenticationManager = jwtReactiveAuthenticationManager;
+    }
+
+    @Bean
+    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
+        // Create an AuthenticationWebFilter with our custom converter and manager
+        AuthenticationWebFilter authenticationWebFilter = new AuthenticationWebFilter(jwtReactiveAuthenticationManager);
+        authenticationWebFilter.setServerAuthenticationConverter(jwtServerAuthenticationConverter);
+
+        http
+            .csrf(ServerHttpSecurity.CsrfSpec::disable)
+            .securityContextRepository(NoOpServerSecurityContextRepository.getInstance()) // Stateless for JWT
+            .authorizeExchange(exchanges -> exchanges
+                // Publicly accessible paths that do NOT require authentication
+                // These requests will pass through the AuthenticationWebFilter but will not require a valid JWT
+                .pathMatchers(
+                    "/api/v1/auth/register/user",
+                    "/api/v1/auth/register/agent",
+                    "/api/v1/auth/test",
+                    "/api/v1/auth/login/agent",
+                    "/api/v1/auth/login/user",
+                    "/api/v1/auth/micro/**",
+                    "/actuator/**",
+                    "/swagger-ui/**",
+                    "/v3/api-docs/**"
+                ).permitAll()
+                // Role-based access for specific paths
+                .pathMatchers("/api/v1/auth/admin/**").hasRole("Admin")
+                .pathMatchers("/api/v1/auth/user/**").hasRole("User")
+                .pathMatchers("/api/v1/auth/travel_agent/**").hasRole("TravelAgent")
+                .pathMatchers("/api/v1/auth/hotel_agent/**").hasRole("HotelAgent")
+                .pathMatchers("/api/v1/auth/flight_agent/**").hasRole("FlightAgent")
+                // All other requests require authentication (will be handled by AuthenticationWebFilter)
+                .anyExchange().authenticated()
+            )
+            // Add the AuthenticationWebFilter to the HTTP Security chain.
+            // This filter will extract the token and authenticate the user.
+            // Spring Security will automatically place it at the correct order.
+            .addFilterAt(authenticationWebFilter, org.springframework.security.web.server.SecurityWebFiltersOrder.AUTHENTICATION);
+
+        return http.build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    // --- IMPORTANT NOTE ON AUTHENTICATION PROPAGATION ---
+    // After the user is authenticated by AuthenticationWebFilter and the SecurityContext is populated,
+    // you still need a custom GlobalFilter (or GatewayFilterFactory) to read from
+    // ReactiveSecurityContextHolder and add user details (e.g., X-User-ID, X-User-Roles)
+    // as custom headers to the proxied request for downstream microservices.
+    // This is separate from the SecurityConfig itself.
+}

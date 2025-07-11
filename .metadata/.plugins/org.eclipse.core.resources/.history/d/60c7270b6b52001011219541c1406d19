@@ -1,0 +1,47 @@
+package com.springbootmicroservices.userservice.model.user.mapper;
+
+import com.springbootmicroservices.userservice.model.user.dto.request.RegisterRequest;
+import com.springbootmicroservices.userservice.model.user.entity.UserEntity;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import javax.annotation.processing.Generated;
+
+@Generated(
+    value = "org.mapstruct.ap.MappingProcessor",
+    date = "2025-06-25T15:07:26+0530",
+    comments = "version: 1.5.5.Final, compiler: Eclipse JDT (IDE) 3.41.0.v20250213-1140, environment: Java 21.0.6 (Eclipse Adoptium)"
+)
+public class RegisterRequestToUserEntityMapperImpl implements RegisterRequestToUserEntityMapper {
+
+    @Override
+    public UserEntity map(RegisterRequest source) {
+        if ( source == null ) {
+            return null;
+        }
+
+        UserEntity.UserEntityBuilder<?, ?> userEntity = UserEntity.builder();
+
+        userEntity.email( source.getEmail() );
+        userEntity.firstName( source.getFirstName() );
+        userEntity.lastName( source.getLastName() );
+        userEntity.password( source.getPassword() );
+        userEntity.phoneNumber( source.getPhoneNumber() );
+
+        return userEntity.build();
+    }
+
+    @Override
+    public List<UserEntity> map(Collection<RegisterRequest> sources) {
+        if ( sources == null ) {
+            return null;
+        }
+
+        List<UserEntity> list = new ArrayList<UserEntity>( sources.size() );
+        for ( RegisterRequest registerRequest : sources ) {
+            list.add( map( registerRequest ) );
+        }
+
+        return list;
+    }
+}

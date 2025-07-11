@@ -1,0 +1,70 @@
+package com.example.security;
+package com.example.security;
+
+import java.util.Collections;
+import java.util.List;
+
+import org.springframework.http.HttpHeaders;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextImpl;
+import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebFilter;
+import org.springframework.web.server.WebFilterChain;
+
+import lombok.RequiredArgsConstructor;
+import reactor.core.publisher.Mono;
+
+/**
+ * Reactive JwtFilter for Spring Cloud Gateway.
+ * This filter intercepts requests, extracts JWTs, validates them, and
+ * sets the authentication context for reactive Spring Security.
+ */
+@Component
+@RequiredArgsConstructor
+public class ReactiveJwtFilter implements WebFilter { // Change to WebFilter
+
+    private final JwtUtil jwtUtil; // Assumes JwtUtil works with String tokens and performs validation
+
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        String authorizationHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            String token = authorizationHeader.substring(7);
+
+            try {
+                String email = jwtUtil.getEmail(token);
+
+                if (email != null && jwtUtil.validateToken(token, email)) {
+                    String role = jwtUtil.getRole(token);
+                    List<SimpleGrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role));
+
+                    // Create Reactive Authentication object
+                    Authentication auth = new UsernamePasswordAuthenticationToken(email, null, authorities);
+
+                    // Set the Authentication object in the reactive security context
+                    // This makes the authenticated user available for subsequent filters and controllers
+                    SecurityContext securityContext = new SecurityContextImpl(auth);
+                    return chain.filter(exchange)
+                                .contextWrite(ReactiveSecurityContextHolder.withSecurityContext(Mono.just(securityContext)));
+                } else {
+                    // Token invalid or email null, proceed without authentication context
+                    System.err.println("JWT validation failed for token: " + token);
+                }
+            } catch (Exception e) {
+                // Log token processing errors (e.g., malformed token, parsing issues)
+                System.err.println("Error processing JWT: " + e.getMessage());
+                // Optionally, you might want to send a specific error response here
+                // return Mono.error(new UnauthorizedException("Invalid or expired token"));
+            }
+        }
+        // Continue the filter chain. If no valid token, the request will proceed unauthenticated,
+        // and subsequent Spring Security rules (e.g., .anyRequest().authenticated()) will deny access.
+        return chain.filter(exchange);
+    }
+}

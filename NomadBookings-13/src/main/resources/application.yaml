@@ -1,0 +1,69 @@
+spring:
+  application:
+    name: UserReviewsAndSupport
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/mast?useSSL=false&serverTimezone=UTC
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+logging:
+  level:
+    root: INFO
+    com.nomad: DEBUG
+    org.springframework.data.jpa: DEBUG
+    org.hibernate: DEBUG
+  file:
+    name: review-service.log
+    path: /var/log/review-service/
+
+server:
+  port: 9090
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,metrics,env,loggers"
+  endpoint:
+    health:
+      show-details: "always"
+  server:
+    port: 9091  
+
+eureka:
+   instance:
+       hostname: localhost
+   client:
+       service-url:
+          default-zone: http://localhost:8761/eureka
+
+springdoc:
+ swagger-ui:
+  path: /swagger-ui.html
+ api-docs:
+  path: /v3/apidocs
+ packagesToScan: com.nomad
+ pathsToMatch: /api/v1/**
+info:
+  title: Nomad Travel Booking API
+  description: API documentation for the Nomad Travel Booking System.
+  version: 1.0.0
+  terms-of-service: http://swagger.io/terms/
+  contact:
+   name: Nomad Support
+   url: http://www.nomad.com/support
+   email: support@nomad.com
+  license:
+   name: Apache 2.0
+   url: http://www.apache.org/licenses/LICENSE-2.0.html

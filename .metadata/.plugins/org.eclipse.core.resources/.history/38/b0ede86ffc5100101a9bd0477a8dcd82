@@ -1,0 +1,51 @@
+package com.example.security;
+import org.springframework.security.authentication.ReactiveAuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
+
+import java.util.Collections;
+import java.util.List;
+
+import lombok.RequiredArgsConstructor;
+
+/**
+ * ReactiveAuthenticationManager implementation for JWT authentication.
+ * It takes an unauthenticated token (from JwtServerAuthenticationConverter)
+ * validates it using JwtUtil, and returns a fully authenticated Authentication object.
+ */
+@Component
+@RequiredArgsConstructor
+public class JwtReactiveAuthenticationManager implements ReactiveAuthenticationManager {
+
+    private final JwtUtil jwtUtil; // Your utility class for JWT validation and parsing
+
+    @Override
+    public Mono<Authentication> authenticate(Authentication authentication) {
+        String authToken = authentication.getCredentials().toString(); // The token is the credential
+
+        return Mono.just(authToken)
+                .flatMap(token -> {
+                    try {
+                        String email = jwtUtil.getEmail(token);
+                        if (email != null && jwtUtil.validateToken(token, email)) {
+                            String role = jwtUtil.getRole(token);
+                            List<SimpleGrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role));
+                            // Return an authenticated token with principal (email) and authorities
+                            // Added an explicit cast to (Authentication) to resolve potential type inference issues.
+                            return Mono.just((Authentication) new UsernamePasswordAuthenticationToken(email, null, authorities));
+                        } else {
+                            // Invalid token, return empty to signify authentication failure
+                            return Mono.empty();
+                        }
+                    } catch (Exception e) {
+                        // Log the error (e.g., token parsing error, signature invalid)
+                        System.err.println("JWT authentication failed: " + e.getMessage());
+                        return Mono.empty(); // Authentication failed
+                    }
+                })
+                .switchIfEmpty(Mono.error(new org.springframework.security.authentication.BadCredentialsException("Invalid or expired JWT token")));
+    }
+}

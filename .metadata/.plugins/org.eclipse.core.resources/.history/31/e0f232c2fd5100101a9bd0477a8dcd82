@@ -1,0 +1,91 @@
+package com.example.demo;
+
+
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.cloud.gateway.mvc.ProxyExchange; // Crucial for Gateway MVC routing
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * Alternative routing configuration for Spring Cloud Gateway MVC using
+ * Spring MVC's @RestController and ProxyExchange.
+ * This replaces the RouteLocator-based approach when using the MVC gateway.
+ *
+ * Ensure you have the 'org.springframework.cloud:spring-cloud-starter-gateway-mvc'
+ * dependency in your pom.xml, and NOT 'spring-cloud-starter-gateway'.
+ * This also means your security configuration must be Servlet-based Spring Security,
+ * not WebFlux-based.
+ */
+@RestController // Marks this class as a Spring MVC controller
+@EnableDiscoveryClient // Essential if you're using 'lb://' for service discovery (e.g., Eureka)
+public class GatewayMvcProxyExchangeRouting {
+
+    // Route for FlightAndHotelBooking service (for /api/v1/hotel/**)
+    // This will intercept all GET, POST, PUT, DELETE, etc., requests
+    // to paths starting with /api/v1/hotel/
+    @RequestMapping("/api/v1/hotel/**")
+    public ResponseEntity<?> proxyHotelBooking(ProxyExchange<Object> proxy) throws Exception {
+        // Forward the request to the FlightAndHotelBooking service
+        // The `forward()` method will preserve the original HTTP method (GET, POST, etc.)
+        // and automatically handle the request body and headers.
+        return proxy.uri("lb://FlightAndHotelBooking").forward();
+    }
+
+    // Route for FlightAndHotelBooking service (for /api/v1/flight/**)
+    @RequestMapping("/api/v1/flight/**")
+    public ResponseEntity<?> proxyFlightBooking(ProxyExchange<Object> proxy) throws Exception {
+        return proxy.uri("lb://FlightAndHotelBooking").forward();
+    }
+
+    // Route for PackageBooking service (for /api/v1/package/**)
+    @RequestMapping("/api/v1/package/**")
+    public ResponseEntity<?> proxyPackageBooking(ProxyExchange<Object> proxy) throws Exception {
+        return proxy.uri("lb://PackageBooking").forward();
+    }
+
+    // Route for PaymentService (for /api/v1/payments/**)
+    @RequestMapping("/api/v1/payments/**")
+    public ResponseEntity<?> proxyPayments(ProxyExchange<Object> proxy) throws Exception {
+        return proxy.uri("lb://PaymentService").forward();
+    }
+
+    // Route for PaymentService (for /api/v1/invoices/**)
+    @RequestMapping("/api/v1/invoices/**")
+    public ResponseEntity<?> proxyInvoices(ProxyExchange<Object> proxy) throws Exception {
+        return proxy.uri("lb://PaymentService").forward();
+    }
+
+    // Route for UserAuthentication service (for /api/v1/auth/**)
+    @RequestMapping("/api/v1/auth/**")
+    public ResponseEntity<?> proxyUserAuthentication(ProxyExchange<Object> proxy) throws Exception {
+        return proxy.uri("lb://UserAuthentication").forward();
+    }
+
+    // Route for UserReviewsAndSupport service (for /api/v1/feedback/**)
+    @RequestMapping("/api/v1/feedback/**")
+    public ResponseEntity<?> proxyFeedback(ProxyExchange<Object> proxy) throws Exception {
+        return proxy.uri("lb://UserReviewsAndSupport").forward();
+    }
+
+    // Route for UserReviewsAndSupport service (for /api/v1/review/**)
+    @RequestMapping("/api/v1/review/**")
+    public ResponseEntity<?> proxyReview(ProxyExchange<Object> proxy) throws Exception {
+        return proxy.uri("lb://UserReviewsAndSupport").forward();
+    }
+
+    // Route for UserReviewsAndSupport service (for /api/v1/support/**)
+    @RequestMapping("/api/v1/support/**")
+    public ResponseEntity<?> proxySupport(ProxyExchange<Object> proxy) throws Exception {
+        return proxy.uri("lb://UserReviewsAndSupport").forward();
+    }
+
+    // You can also add specific GET/POST mappings if you need different logic for different HTTP methods
+    // Example: A POST-specific mapping for auth
+    // @PostMapping("/api/v1/auth/login/user")
+    // public ResponseEntity<?> proxyLoginUser(ProxyExchange<Object> proxy, @RequestBody String requestBody) throws Exception {
+    //     return proxy.uri("lb://UserAuthentication/api/v1/auth/login/user").post();
+    // }
+}

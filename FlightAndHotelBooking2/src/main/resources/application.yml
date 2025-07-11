@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: PackageBooking
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/mast
+    username: root
+    password: root
+  jpa:
+    generate-ddl: true
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+server:
+  port: 8085
+logging:
+  level:
+    root: INFO
+    com.nomads: DEBUG
+  file:
+    name: package-service.log 
+    path: /var/log/package-service/ 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+eureka:
+  instance:
+    hostname: localhost
+  client:
+     service-url:
+       default-zone: http://localhost:8761/eureka
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/apidocs
+  packagesToScan: com.nomads
+  pathsToMatch: /api/v1/**

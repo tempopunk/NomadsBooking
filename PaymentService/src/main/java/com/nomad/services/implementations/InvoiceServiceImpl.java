@@ -1,0 +1,189 @@
+package com.nomad.services.implementations;
+
+import java.io.ByteArrayOutputStream;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.util.Optional;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.itextpdf.text.BaseColor;
+import com.itextpdf.text.Chunk;
+// iText 5 imports
+import com.itextpdf.text.Document;
+import com.itextpdf.text.DocumentException;
+import com.itextpdf.text.Element;
+import com.itextpdf.text.Font;
+import com.itextpdf.text.FontFactory;
+import com.itextpdf.text.Paragraph;
+import com.itextpdf.text.pdf.PdfWriter;
+import com.nomad.dto.InvoiceResponseDTO;
+import com.nomad.exception.BadRequestException;
+import com.nomad.exception.ResourceNotFoundException;
+import com.nomad.model.Invoice;
+import com.nomad.model.Payment;
+import com.nomad.repository.InvoiceRepository;
+import com.nomad.repository.PaymentRepository;
+import com.nomad.services.interfaces.InvoiceService;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class InvoiceServiceImpl implements InvoiceService {
+
+    private final InvoiceRepository invoiceRepository;
+    
+    private final PaymentRepository paymentRepository;
+
+    @Override
+    @Transactional
+    public InvoiceResponseDTO generateInvoice(int userId,Long bookingId, Long paymentId) {
+        log.info("Attempting to generate invoice for booking ID: {} and payment ID: {}", bookingId, paymentId);
+        Optional<Invoice> invoices = invoiceRepository.findByBookingId(bookingId);
+        
+        if (invoices.isPresent()) {
+            return  mapToInvoiceResponseDTO(invoices.get(), "Invoice generated successfully");
+        }
+
+        
+
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found with ID: " + paymentId));
+
+        if (!bookingId.equals(payment.getBookingId())) {
+            throw new BadRequestException("Booking ID and Payment's Booking ID do not match.");
+        }
+
+        BigDecimal totalAmount = new BigDecimal(payment.getAmount());
+        BigDecimal taxRate = new BigDecimal("0.18");
+        BigDecimal taxAmount = totalAmount.multiply(taxRate);
+        BigDecimal netAmount = totalAmount.subtract(taxAmount);
+
+        Invoice invoice = new Invoice();
+        invoice.setBookingId(bookingId);
+        invoice.setPaymentId(paymentId);
+        invoice.setUserId(userId);
+        invoice.setInvoiceNumber("INV-" + Instant.now().toEpochMilli());
+        invoice.setInvoiceDate(Instant.now());
+        invoice.setTotalAmount(totalAmount);
+        invoice.setTaxAmount(taxAmount);
+        invoice.setNetAmount(netAmount);
+        invoice.setInvoicePdfUrl("http://localhost:8087/api/v1/invoices/user/" + invoice.getInvoiceNumber() + "/download"); // This URL is a placeholder
+
+        Invoice savedInvoice = invoiceRepository.save(invoice);
+        log.info("Invoice generated successfully with ID: {} for booking ID: {}", savedInvoice.getInvoiceId(), bookingId);
+
+        return mapToInvoiceResponseDTO(savedInvoice, "Invoice generated successfully");
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public InvoiceResponseDTO getInvoiceDetails(Long invoiceId) {
+        log.info("Fetching invoice details for invoice ID: {}", invoiceId);
+        Invoice invoice = invoiceRepository.findById(invoiceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Invoice not found with ID: " + invoiceId));
+        return mapToInvoiceResponseDTO(invoice, "Invoice details fetched successfully");
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public InvoiceResponseDTO getInvoiceByBookingId(Long bookingId) {
+        log.info("Fetching invoice details for booking ID: {}", bookingId);
+        Invoice invoice = invoiceRepository.findByBookingId(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Invoice not found for booking ID: " + bookingId));
+        return mapToInvoiceResponseDTO(invoice, "Invoice details fetched successfully by booking ID");
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] downloadInvoiceAsPdf(String invoiceNumber) {
+        log.info("Attempting to generate PDF for invoice ID: {}", invoiceNumber);
+        Invoice invoice = invoiceRepository.findByInvoiceNumber(invoiceNumber);
+                
+        if(invoice==null) {
+        	throw new ResourceNotFoundException("Invoice not found with ID: " + invoiceNumber);
+        }
+        Long invoiceId = invoice.getInvoiceId();
+        Document document = new Document();
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        try {
+            PdfWriter.getInstance(document, baos);
+            document.open();
+
+            Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 24, BaseColor.BLACK);
+            Font headingFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, BaseColor.DARK_GRAY);
+            Font normalFont = FontFactory.getFont(FontFactory.HELVETICA, 12, BaseColor.BLACK);
+
+            // Title
+            Paragraph title = new Paragraph("Travel Booking Invoice", titleFont);
+            title.setAlignment(Element.ALIGN_CENTER);
+            document.add(title);
+            Paragraph separator = new Paragraph(new Chunk("------------------------------------", normalFont));
+            separator.setAlignment(Element.ALIGN_CENTER);
+            document.add(separator);
+
+            // Invoice Details
+            document.add(new Paragraph("Invoice Number: " + invoice.getInvoiceNumber(), normalFont));
+            document.add(new Paragraph("Invoice Date: " + invoice.getInvoiceDate().atZone(java.time.ZoneId.systemDefault()) 
+            	    .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")), normalFont));
+            document.add(new Paragraph("Booking ID: " + invoice.getBookingId(), normalFont));
+            document.add(new Paragraph("User ID: " + invoice.getUserId(), normalFont));
+            document.add(new Paragraph("Payment ID: " + invoice.getPaymentId(), normalFont));
+
+            document.add(new Paragraph(Chunk.NEWLINE)); // Spacer
+
+            // Amount Breakdown
+            document.add(new Paragraph("Amount Breakdown:", headingFont));
+            document.add(new Paragraph("Net Amount: INR " + String.format("%.2f", invoice.getNetAmount()), normalFont));
+            document.add(new Paragraph("Tax Amount (18%): INR " + String.format("%.2f", invoice.getTaxAmount()), normalFont));
+            Paragraph totalAmount = new Paragraph("Total Amount: INR " + String.format("%.2f", invoice.getTotalAmount()), headingFont);
+            totalAmount.setAlignment(Element.ALIGN_RIGHT);
+            document.add(totalAmount);
+
+            document.add(new Paragraph(Chunk.NEWLINE)); // Spacer
+
+            // Footer
+            Paragraph footer = new Paragraph("Thank you for your business!", normalFont);
+            footer.setAlignment(Element.ALIGN_CENTER);
+            document.add(footer);
+
+            document.close();
+            log.info("PDF content generated for invoice ID: {}", invoiceId);
+            return baos.toByteArray();
+
+        } catch (DocumentException e) {
+            log.error("Document creation error for invoice ID {}: {}", invoiceId, e.getMessage(), e);
+            throw new RuntimeException("Failed to create invoice PDF document for ID: " + invoiceId, e);
+        } catch (Exception e) {
+            log.error("Unexpected error generating PDF for invoice ID {}: {}", invoiceId, e.getMessage(), e);
+            throw new RuntimeException("Failed to generate invoice PDF for ID: " + invoiceId, e);
+        } finally {
+            if (document.isOpen()) {
+                document.close();
+            }
+        }
+    }
+
+    private InvoiceResponseDTO mapToInvoiceResponseDTO(Invoice invoice, String message) {
+        InvoiceResponseDTO dto = new InvoiceResponseDTO();
+        dto.setInvoiceId(invoice.getInvoiceId());
+        dto.setInvoiceNumber(invoice.getInvoiceNumber());
+        dto.setBookingId(invoice.getBookingId());
+        dto.setUserId(invoice.getUserId());
+        dto.setPaymentId(invoice.getPaymentId());
+        dto.setInvoiceDate(invoice.getInvoiceDate());
+        dto.setTotalAmount(invoice.getTotalAmount());
+        dto.setTaxAmount(invoice.getTaxAmount());
+        dto.setNetAmount(invoice.getNetAmount());
+        dto.setInvoicePdfUrl(invoice.getInvoicePdfUrl());
+        dto.setMessage(message);
+        return dto;
+    }
+}

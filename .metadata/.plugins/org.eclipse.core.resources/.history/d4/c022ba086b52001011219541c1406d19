@@ -1,0 +1,50 @@
+package com.springbootmicroservices.productservice.model.product.mapper;
+
+import com.springbootmicroservices.productservice.model.product.Product;
+import com.springbootmicroservices.productservice.model.product.entity.ProductEntity;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import javax.annotation.processing.Generated;
+
+@Generated(
+    value = "org.mapstruct.ap.MappingProcessor",
+    date = "2025-06-25T15:07:21+0530",
+    comments = "version: 1.5.5.Final, compiler: Eclipse JDT (IDE) 3.41.0.v20250213-1140, environment: Java 21.0.6 (Eclipse Adoptium)"
+)
+public class ProductEntityToProductMapperImpl implements ProductEntityToProductMapper {
+
+    @Override
+    public List<Product> map(Collection<ProductEntity> sources) {
+        if ( sources == null ) {
+            return null;
+        }
+
+        List<Product> list = new ArrayList<Product>( sources.size() );
+        for ( ProductEntity productEntity : sources ) {
+            list.add( map( productEntity ) );
+        }
+
+        return list;
+    }
+
+    @Override
+    public Product map(ProductEntity source) {
+        if ( source == null ) {
+            return null;
+        }
+
+        Product.ProductBuilder<?, ?> product = Product.builder();
+
+        product.createdAt( source.getCreatedAt() );
+        product.createdBy( source.getCreatedBy() );
+        product.updatedAt( source.getUpdatedAt() );
+        product.updatedBy( source.getUpdatedBy() );
+        product.amount( source.getAmount() );
+        product.id( source.getId() );
+        product.name( source.getName() );
+        product.unitPrice( source.getUnitPrice() );
+
+        return product.build();
+    }
+}

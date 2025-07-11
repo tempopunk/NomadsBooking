@@ -1,0 +1,46 @@
+package com.springbootmicroservices.productservice.model.product.mapper;
+
+import com.springbootmicroservices.productservice.model.product.Product;
+import com.springbootmicroservices.productservice.model.product.dto.response.ProductResponse;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import javax.annotation.processing.Generated;
+
+@Generated(
+    value = "org.mapstruct.ap.MappingProcessor",
+    date = "2025-06-25T15:07:21+0530",
+    comments = "version: 1.5.5.Final, compiler: Eclipse JDT (IDE) 3.41.0.v20250213-1140, environment: Java 21.0.6 (Eclipse Adoptium)"
+)
+public class ProductToProductResponseMapperImpl implements ProductToProductResponseMapper {
+
+    @Override
+    public List<ProductResponse> map(Collection<Product> sources) {
+        if ( sources == null ) {
+            return null;
+        }
+
+        List<ProductResponse> list = new ArrayList<ProductResponse>( sources.size() );
+        for ( Product product : sources ) {
+            list.add( map( product ) );
+        }
+
+        return list;
+    }
+
+    @Override
+    public ProductResponse map(Product source) {
+        if ( source == null ) {
+            return null;
+        }
+
+        ProductResponse.ProductResponseBuilder productResponse = ProductResponse.builder();
+
+        productResponse.amount( source.getAmount() );
+        productResponse.id( source.getId() );
+        productResponse.name( source.getName() );
+        productResponse.unitPrice( source.getUnitPrice() );
+
+        return productResponse.build();
+    }
+}

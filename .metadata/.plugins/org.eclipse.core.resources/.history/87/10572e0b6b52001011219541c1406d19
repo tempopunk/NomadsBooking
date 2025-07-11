@@ -1,0 +1,54 @@
+package com.springbootmicroservices.userservice.model.user.mapper;
+
+import com.springbootmicroservices.userservice.model.user.User;
+import com.springbootmicroservices.userservice.model.user.entity.UserEntity;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import javax.annotation.processing.Generated;
+
+@Generated(
+    value = "org.mapstruct.ap.MappingProcessor",
+    date = "2025-06-25T15:07:26+0530",
+    comments = "version: 1.5.5.Final, compiler: Eclipse JDT (IDE) 3.41.0.v20250213-1140, environment: Java 21.0.6 (Eclipse Adoptium)"
+)
+public class UserEntityToUserMapperImpl implements UserEntityToUserMapper {
+
+    @Override
+    public List<User> map(Collection<UserEntity> sources) {
+        if ( sources == null ) {
+            return null;
+        }
+
+        List<User> list = new ArrayList<User>( sources.size() );
+        for ( UserEntity userEntity : sources ) {
+            list.add( map( userEntity ) );
+        }
+
+        return list;
+    }
+
+    @Override
+    public User map(UserEntity source) {
+        if ( source == null ) {
+            return null;
+        }
+
+        User.UserBuilder<?, ?> user = User.builder();
+
+        user.createdAt( source.getCreatedAt() );
+        user.createdBy( source.getCreatedBy() );
+        user.updatedAt( source.getUpdatedAt() );
+        user.updatedBy( source.getUpdatedBy() );
+        user.email( source.getEmail() );
+        user.firstName( source.getFirstName() );
+        user.id( source.getId() );
+        user.lastName( source.getLastName() );
+        user.password( source.getPassword() );
+        user.phoneNumber( source.getPhoneNumber() );
+        user.userStatus( source.getUserStatus() );
+        user.userType( source.getUserType() );
+
+        return user.build();
+    }
+}
